@@ -1420,11 +1420,16 @@ a {
   }
 
   .messages {
-    padding: var(--space-3);
+    padding: var(--space-3) var(--space-3) calc(var(--space-3) + 140px);
+  }
+
+  .welcome-screen {
+    min-height: calc(100% - 140px);
+    padding: var(--space-4);
   }
 
   .input-area {
-    padding: var(--space-2) var(--space-3) var(--space-3);
+    padding: var(--space-2) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
   }
 
   .view-header {
