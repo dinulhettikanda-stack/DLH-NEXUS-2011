@@ -417,14 +417,30 @@
     // Show thinking indicator
     const { msg, status, textDiv } = appendThinkingMessage();
 
+    // Update status text
+    const statusText = status.querySelector('.thinking-text');
+    if (statusText) statusText.textContent = 'DLH NEXUS MODEL is processing...';
+
     // Generate response
     let fullResponse = '';
     let firstChunk = true;
+    let timedOut = false;
+
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (firstChunk) {
+        timedOut = true;
+        status.style.display = 'none';
+        textDiv.style.display = 'block';
+        textDiv.innerHTML = renderMarkdown('The request is taking longer than expected. Please sign in if you haven\'t already, then try again.\n\nIf the issue persists, the AI service may be temporarily unavailable.');
+      }
+    }, 45000);
 
     try {
       // Check if web search is enabled
       if (searchEnabled) {
         for await (const chunk of NexusModel.searchWeb(text)) {
+          if (timedOut) break;
           if (firstChunk) {
             status.style.display = 'none';
             textDiv.style.display = 'block';
@@ -439,6 +455,7 @@
         const history = conv.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
 
         for await (const chunk of NexusModel.generateResponse(text, history)) {
+          if (timedOut) break;
           if (firstChunk) {
             status.style.display = 'none';
             textDiv.style.display = 'block';
@@ -450,9 +467,12 @@
         }
       }
 
+      clearTimeout(timeoutId);
+
       // If we got no response
-      if (!fullResponse) {
-        fullResponse = 'I apologize, but I was unable to generate a response. Please try again.';
+      if (!fullResponse && !timedOut) {
+        fullResponse = 'I apologize, but I was unable to generate a response. This may be due to authentication requirements or service availability. Please try again.';
+        textDiv.style.display = 'block';
         textDiv.innerHTML = renderMarkdown(fullResponse);
       }
 
@@ -470,9 +490,15 @@
       textDiv.parentElement.appendChild(actions);
 
     } catch (err) {
+      clearTimeout(timeoutId);
       status.style.display = 'none';
       textDiv.style.display = 'block';
-      textDiv.innerHTML = renderMarkdown(`Error: ${err.message || 'Something went wrong. Please try again.'}`);
+      const errMsg = err.message || err.toString() || 'Something went wrong.';
+      if (errMsg.includes('auth') || errMsg.includes('sign') || errMsg.includes('Sign') || errMsg.includes('popup')) {
+        textDiv.innerHTML = renderMarkdown('**Authentication required.**\n\nA sign-in window should have opened. Please complete the sign-in process and try again. If no window appeared, please check your browser\'s popup blocker settings.');
+      } else {
+        textDiv.innerHTML = renderMarkdown(`Error: ${errMsg}`);
+      }
     }
 
     scrollToBottom();
@@ -1005,10 +1031,49 @@
     textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
   }
 
+  // ---- Auth status ----
+  function updateAuthStatus() {
+    const btn = $('#auth-status');
+    if (!btn) return;
+    const dot = btn.querySelector('.auth-dot');
+    const text = btn.querySelector('.auth-text');
+
+    if (typeof puter === 'undefined') {
+      btn.className = 'auth-btn disconnected';
+      text.textContent = 'AI Offline';
+      return;
+    }
+
+    btn.className = 'auth-btn connecting';
+    text.textContent = 'Connecting...';
+
+    // Check if signed in
+    try {
+      if (puter.isSignedIn && puter.isSignedIn()) {
+        btn.className = 'auth-btn connected';
+        text.textContent = 'Connected';
+        NexusModel.checkAuth();
+        return;
+      }
+    } catch (e) {
+      // Fall through
+    }
+
+    // Puter is available but not signed in - it will handle auth automatically
+    btn.className = 'auth-btn connected';
+    text.textContent = 'Ready';
+    NexusModel.checkAuth();
+  }
+
   // ---- Init ----
   function init() {
     // Theme
     initTheme();
+
+    // Check Puter auth status
+    setTimeout(updateAuthStatus, 1000);
+    // Re-check periodically
+    setInterval(updateAuthStatus, 10000);
 
     // Create initial conversation
     NexusModel.createConversation();

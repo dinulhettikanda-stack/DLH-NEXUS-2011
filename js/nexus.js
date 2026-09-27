@@ -33,6 +33,7 @@ Always provide the best possible answer. Be direct, accurate, and helpful. Use m
   let conversations = [];
   let currentConversationId = null;
   let isGenerating = false;
+  let isAuthenticated = false;
   let settings = {
     temperature: 0.7,
     maxTokens: 4096
@@ -41,6 +42,47 @@ Always provide the best possible answer. Be direct, accurate, and helpful. Use m
   // Generate a unique ID
   function genId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+  }
+
+  // Check if user is authenticated with Puter
+  function checkAuth() {
+    try {
+      if (typeof puter !== 'undefined' && puter.isSignedIn) {
+        isAuthenticated = puter.isSignedIn();
+        return isAuthenticated;
+      }
+    } catch (e) {
+      // isSignedIn might not exist in all versions
+    }
+    // If puter is available, assume we can use it - it will handle auth automatically
+    if (typeof puter !== 'undefined' && puter.ai) {
+      isAuthenticated = true;
+      return true;
+    }
+    return false;
+  }
+
+  // Sign in to Puter
+  async function signIn() {
+    try {
+      if (typeof puter !== 'undefined') {
+        if (puter.auth && puter.auth.signIn) {
+          await puter.auth.signIn();
+        } else if (puter.auth && puter.auth.authenticate) {
+          await puter.auth.authenticate();
+        }
+        isAuthenticated = true;
+        return true;
+      }
+    } catch (e) {
+      console.error('Sign in error:', e);
+    }
+    return false;
+  }
+
+  // Get auth status
+  function getAuthStatus() {
+    return isAuthenticated;
   }
 
   // Create a new conversation
@@ -110,32 +152,39 @@ Always provide the best possible answer. Be direct, accurate, and helpful. Use m
   // Call a single model (non-streaming, collect full response)
   async function callModel(model, messages, options = {}) {
     try {
-      const response = await puter.ai.chat(messages, {
+      const chatOpts = {
         model: model,
         stream: false,
         temperature: options.temperature || settings.temperature,
-        max_tokens: options.maxTokens || settings.maxTokens,
-        normalize: true
-      });
+        max_tokens: options.maxTokens || settings.maxTokens
+      };
 
-      // Extract text from normalized response
-      if (response && response.message) {
-        if (typeof response.message.content === 'string') {
+      const response = await puter.ai.chat(messages, chatOpts);
+
+      // Extract text from response - handle various response formats
+      if (response) {
+        // Normalized response (message.content as string)
+        if (response.message && typeof response.message.content === 'string') {
           return response.message.content;
         }
-        if (Array.isArray(response.message.content)) {
+        // Array content blocks
+        if (response.message && Array.isArray(response.message.content)) {
           return response.message.content
             .filter(b => b.type === 'text')
             .map(b => b.text)
             .join('');
         }
+        // Direct text
+        if (response.text) return response.text;
+        // String response
+        if (typeof response === 'string') return response;
+        // toString fallback
+        if (response.message && response.message.content) {
+          return String(response.message.content);
+        }
+        return JSON.stringify(response);
       }
-
-      // Fallback: try response.text or response itself
-      if (response && response.text) return response.text;
-      if (typeof response === 'string') return response;
-
-      return JSON.stringify(response);
+      return null;
     } catch (err) {
       console.error(`Model ${model} error:`, err);
       return null;
@@ -145,28 +194,43 @@ Always provide the best possible answer. Be direct, accurate, and helpful. Use m
   // Call a single model with streaming
   async function* streamModel(model, messages, options = {}) {
     try {
-      const response = await puter.ai.chat(messages, {
+      const chatOpts = {
         model: model,
         stream: true,
         temperature: options.temperature || settings.temperature,
         max_tokens: options.maxTokens || settings.maxTokens
-      });
+      };
+
+      const response = await puter.ai.chat(messages, chatOpts);
 
       for await (const chunk of response) {
-        if (chunk.type === 'text' && chunk.text) {
-          yield chunk.text;
-        } else if (chunk.text) {
-          yield chunk.text;
+        if (chunk) {
+          // Handle various chunk formats
+          if (chunk.type === 'text' && chunk.text) {
+            yield chunk.text;
+          } else if (chunk.text) {
+            yield chunk.text;
+          } else if (typeof chunk === 'string') {
+            yield chunk;
+          } else if (chunk.message && chunk.message.content) {
+            yield typeof chunk.message.content === 'string' 
+              ? chunk.message.content 
+              : JSON.stringify(chunk.message.content);
+          }
         }
       }
     } catch (err) {
       console.error(`Stream ${model} error:`, err);
-      yield `[Error: ${err.message || 'Model unavailable'}]`;
+      const errMsg = err.message || err.toString();
+      if (errMsg.includes('auth') || errMsg.includes('sign') || errMsg.includes('Sign')) {
+        yield `[Authentication required. Please sign in to use DLH NEXUS MODEL.]`;
+      } else {
+        yield `[Error: ${errMsg}]`;
+      }
     }
   }
 
   // Generate response using the DLH NEXUS MODEL ensemble
-  // This calls all 3 models in parallel, then synthesizes the best response
   async function* generateResponse(userMessage, history, options = {}) {
     if (isGenerating) {
       yield 'Already generating a response...';
@@ -184,24 +248,25 @@ Always provide the best possible answer. Be direct, accurate, and helpful. Use m
       const messages = buildMessages(historyMessages, SYNTHESIS_SYSTEM);
 
       // Phase 1: Call all 3 models in parallel
-      const modelResults = await Promise.allSettled([
+      const modelPromises = [
         callModel(MODELS.PRIMARY, messages, options),
         callModel(MODELS.SECONDARY, messages, options),
         callModel(MODELS.TERTIARY, messages, options)
-      ]);
+      ];
+
+      const modelResults = await Promise.allSettled(modelPromises);
 
       // Collect successful responses
       const responses = [];
-      const modelNames = ['Model Alpha', 'Model Beta', 'Model Gamma'];
       modelResults.forEach((result, i) => {
         if (result.status === 'fulfilled' && result.value) {
-          responses.push({ name: modelNames[i], content: result.value });
+          responses.push(result.value);
         }
       });
 
-      // If no responses succeeded, try a direct call
+      // If no responses succeeded, try direct streaming from primary model
       if (responses.length === 0) {
-        // Fallback: try streaming directly from primary model
+        // Fallback: stream directly from primary model
         yield* streamModel(MODELS.PRIMARY, messages, options);
         isGenerating = false;
         return;
@@ -209,7 +274,7 @@ Always provide the best possible answer. Be direct, accurate, and helpful. Use m
 
       // If only one model responded, use it directly
       if (responses.length === 1) {
-        const text = responses[0].content;
+        const text = responses[0];
         // Stream it out word by word for a natural feel
         const words = text.split(' ');
         for (let i = 0; i < words.length; i++) {
@@ -220,21 +285,17 @@ Always provide the best possible answer. Be direct, accurate, and helpful. Use m
       }
 
       // Phase 2: Synthesize using the primary model
-      // Build synthesis prompt with all responses
-      const synthesisPrompt = `You are DLH NEXUS MODEL. Three AI analysis systems have generated responses to the user's query. Synthesize them into one superior response that combines the best insights, most accurate information, and clearest presentation.
+      let synthesisPrompt = `You are DLH NEXUS MODEL. Three AI analysis systems have generated responses to the user's query. Synthesize them into one superior response that combines the best insights, most accurate information, and clearest presentation.\n\nUSER QUERY: ${userMessage}\n\n`;
 
-USER QUERY: ${userMessage}
-
-`;
-
-      let responseSection = '';
       responses.forEach((r, i) => {
-        responseSection += `--- ANALYSIS ${i + 1} ---\n${r.content}\n\n`;
+        synthesisPrompt += `--- ANALYSIS ${i + 1} ---\n${r}\n\n`;
       });
+
+      synthesisPrompt += `--- END ANALYSES ---\n\nNow provide the definitive response to the user's original query. Combine the best elements from all analyses. Do not reference the analyses or mention multiple models — respond directly as DLH NEXUS MODEL.`;
 
       const synthesisMessages = [
         { role: 'system', content: SYNTHESIS_SYSTEM },
-        { role: 'user', content: synthesisPrompt + responseSection + `\n--- END ANALYSES ---\n\nNow provide the definitive response to the user's original query. Combine the best elements from all analyses. Do not reference the analyses or mention multiple models — respond directly as DLH NEXUS MODEL.` }
+        { role: 'user', content: synthesisPrompt }
       ];
 
       // Stream the synthesized response
@@ -242,7 +303,12 @@ USER QUERY: ${userMessage}
 
     } catch (err) {
       console.error('Nexus generation error:', err);
-      yield `\n\n[Error: ${err.message || 'Generation failed'}]`;
+      const errMsg = err.message || err.toString();
+      if (errMsg.includes('auth') || errMsg.includes('sign') || errMsg.includes('Sign')) {
+        yield '\n\n[Authentication required. Please sign in to use DLH NEXUS MODEL.]';
+      } else {
+        yield `\n\n[Error: ${errMsg}]`;
+      }
     } finally {
       isGenerating = false;
     }
@@ -270,6 +336,8 @@ USER QUERY: ${userMessage}
         }
       } else if (response && response.text) {
         title = response.text;
+      } else if (typeof response === 'string') {
+        title = response;
       }
 
       title = title.trim().replace(/^["']|["']$/g, '').replace(/\.$/, '');
@@ -317,8 +385,7 @@ USER QUERY: ${userMessage}
         imageUrl,
         {
           model: MODELS.PRIMARY,
-          stream: false,
-          normalize: true
+          stream: false
         }
       );
 
@@ -389,10 +456,14 @@ USER QUERY: ${userMessage}
       });
 
       for await (const chunk of response) {
-        if (chunk.type === 'text' && chunk.text) {
-          yield chunk.text;
-        } else if (chunk.text) {
-          yield chunk.text;
+        if (chunk) {
+          if (chunk.type === 'text' && chunk.text) {
+            yield chunk.text;
+          } else if (chunk.text) {
+            yield chunk.text;
+          } else if (typeof chunk === 'string') {
+            yield chunk;
+          }
         }
       }
     } catch (err) {
@@ -413,8 +484,7 @@ USER QUERY: ${userMessage}
         file,
         {
           model: MODELS.PRIMARY,
-          stream: false,
-          normalize: true
+          stream: false
         }
       );
 
@@ -442,6 +512,9 @@ USER QUERY: ${userMessage}
   // Public API
   return {
     MODELS,
+    checkAuth,
+    signIn,
+    getAuthStatus,
     createConversation,
     getCurrentConversation,
     getConversations,
