@@ -100,7 +100,7 @@
 
   // ---- Theme ----
   function initTheme() {
-    const saved = null; // No localStorage in sandbox
+    const saved = null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const theme = saved || (prefersDark ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', theme);
@@ -868,21 +868,13 @@
       }
     },
     {
-      name: 'Fullscreen',
-      desc: 'Toggle fullscreen mode for immersive experience',
-      icon: 'fullscreen',
+      name: 'Page Visibility',
+      desc: 'Monitor page visibility and tab focus state',
+      icon: 'visibility',
       action: async (output) => {
-        try {
-          if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen();
-            output.textContent = 'Fullscreen mode activated';
-          } else {
-            await document.exitFullscreen();
-            output.textContent = 'Exited fullscreen mode';
-          }
-        } catch {
-          output.textContent = 'Fullscreen not supported';
-        }
+        const state = document.visibilityState;
+        const hidden = document.hidden;
+        output.textContent = `Tab state: ${state}\nHidden: ${hidden ? 'Yes' : 'No'}`;
         output.classList.add('visible');
       }
     },
@@ -945,7 +937,7 @@
       battery: '<rect x="1" y="6" width="18" height="12" rx="2"/><path d="M23 13v-2"/><path d="M5 10v4M9 10v4M13 10v4"/>',
       wifi: '<path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/>',
       vibrate: '<path d="M2 8l2-3v14l-2-3M6 5v14M10 5v14M14 5v14M18 5v14M22 8l-2-3v14l2-3"/>',
-      fullscreen: '<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+      visibility: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
       info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
       lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'
     };
