@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- DLH NEXUS Logo - Geometric, SpaceX-inspired -->
+  <!-- Outer diamond frame -->
+  <path d="M60 4 L116 60 L60 116 L4 60 Z" stroke="currentColor" stroke-width="3" fill="none"/>
+  <!-- Inner N shape (Nexus) - stylized like a rocket trajectory -->
+  <path d="M38 84 L38 36 L82 84 L82 36" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+  <!-- Accent dot at center -->
+  <circle cx="60" cy="60" r="3" fill="currentColor"/>
+</svg>
