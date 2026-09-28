@@ -3,26 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <meta name="description" content="DLH NEXUS - The most advanced AI model. Powered by DLH NEXUS MODEL.">
-  <meta name="theme-color" content="#000000">
-  <title>DLH NEXUS</title>
-
-  <!-- Favicon -->
+  <meta name="description" content="DLH NEXUS MODEL - The world's most advanced AI. GPT-6 Astra × Fable 5.1 × Grok 4.7.">
+  <title>DLH NEXUS MODEL</title>
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
-
-  <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css">
-
-  <!-- AI SDK -->
   <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
-  <!-- App Container -->
   <div id="app">
 
     <!-- Sidebar -->
@@ -30,7 +20,7 @@
       <div class="sidebar-header">
         <div class="logo-wrap">
           <div class="logo-mark">
-            <svg viewBox="0 0 120 120" fill="none" width="28" height="28">
+            <svg viewBox="0 0 120 120" fill="none" width="26" height="26">
               <path d="M60 4 L116 60 L60 116 L4 60 Z" stroke="currentColor" stroke-width="3" fill="none"/>
               <path d="M38 84 L38 36 L82 84 L82 36" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
               <circle cx="60" cy="60" r="3" fill="currentColor"/>
@@ -38,34 +28,32 @@
           </div>
           <span class="logo-text">DLH NEXUS</span>
         </div>
-        <button id="new-chat-btn" class="new-chat-btn" aria-label="New conversation" title="New conversation">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
+        <button id="new-chat-btn" class="new-chat-btn" aria-label="New conversation">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>
 
-      <div id="conversations-list" class="conversations-list">
-        <!-- Conversations populated by JS -->
+      <div id="conversations-list" class="conversations-list"></div>
+
+      <!-- BOT MODE toggle -->
+      <div class="bot-mode-section">
+        <button id="bot-mode-toggle" class="bot-mode-toggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4M8 16h.01M16 16h.01"/></svg>
+          <span>NEXUS BOT MODE</span>
+          <div class="bot-mode-switch"><div class="bot-mode-knob"></div></div>
+        </button>
+        <p class="bot-mode-desc">Activate autonomous multi-step task execution</p>
       </div>
 
-      <!-- Nav items -->
       <nav class="sidebar-nav">
         <button class="nav-item" data-view="chat" data-active="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span>Chat</span>
         </button>
-        <button class="nav-item" data-view="image">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
-          <span>Image Gen</span>
-        </button>
-        <button class="nav-item" data-view="bot">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4M8 16h.01M16 16h.01"/></svg>
-          <span>NEXUS BOT</span>
-        </button>
         <button class="nav-item" data-view="connectors">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4M21 12c0 5-4 9-9 9s-9-4-9-9 4-9 9-9 9 4 9 9z"/></svg>
           <span>Connectors</span>
+          <span class="nav-badge">900T+</span>
         </button>
         <button class="nav-item" data-view="device">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
@@ -77,8 +65,14 @@
         </button>
       </nav>
 
-      <!-- User section -->
       <div class="sidebar-footer">
+        <button id="auth-btn" class="auth-btn">
+          <span class="auth-dot"></span>
+          <span class="auth-text">Connecting...</span>
+        </button>
+        <button id="sign-out-btn" class="sign-out-btn" style="display:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
         <div class="user-badge">
           <div class="user-avatar">DLH</div>
           <span class="user-name">NEXUS User</span>
@@ -86,39 +80,26 @@
       </div>
     </aside>
 
-    <!-- Mobile overlay -->
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
-    <!-- Main Content -->
+    <!-- Main -->
     <main id="main" class="main">
 
-      <!-- Top Bar -->
-      <header class="topbar">
-        <button id="menu-toggle" class="menu-toggle" aria-label="Toggle sidebar">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      <!-- Centered model name (no header bar) -->
+      <div class="model-name-bar">
+        <span class="model-name-dot"></span>
+        <span class="model-name-text">DLH NEXUS MODEL</span>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle theme">
+          <svg id="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <div class="model-badge">
-          <span class="model-badge-dot"></span>
-          <span>DLH NEXUS MODEL</span>
-        </div>
-        <div class="topbar-actions">
-          <button id="auth-status" class="auth-btn" title="Authentication status">
-            <span class="auth-dot"></span>
-            <span class="auth-text">Connecting...</span>
-          </button>
-          <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">
-            <svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          </button>
-        </div>
-      </header>
+      </div>
 
       <!-- Chat View -->
       <section id="view-chat" class="view active">
         <div id="messages" class="messages">
-          <!-- Welcome screen -->
           <div id="welcome-screen" class="welcome-screen">
             <div class="welcome-logo">
-              <svg viewBox="0 0 120 120" fill="none" width="72" height="72">
+              <svg viewBox="0 0 120 120" fill="none" width="64" height="64">
                 <path d="M60 4 L116 60 L60 116 L4 60 Z" stroke="currentColor" stroke-width="2.5" fill="none"/>
                 <path d="M38 84 L38 36 L82 84 L82 36" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
                 <circle cx="60" cy="60" r="3" fill="currentColor"/>
@@ -127,22 +108,10 @@
             <h1 class="welcome-title">DLH NEXUS</h1>
             <p class="welcome-subtitle">The world's most advanced AI model</p>
             <div class="welcome-suggestions">
-              <button class="suggestion-card" data-prompt="Explain quantum computing in simple terms">
-                <span class="suggestion-icon">⚡</span>
-                <span class="suggestion-text">Explain quantum computing</span>
-              </button>
-              <button class="suggestion-card" data-prompt="Write a Python script to sort a list using merge sort">
-                <span class="suggestion-icon">💻</span>
-                <span class="suggestion-text">Write merge sort in Python</span>
-              </button>
-              <button class="suggestion-card" data-prompt="What are the latest breakthroughs in space exploration?">
-                <span class="suggestion-icon">🚀</span>
-                <span class="suggestion-text">Space exploration breakthroughs</span>
-              </button>
-              <button class="suggestion-card" data-prompt="Create a healthy meal plan for a week">
-                <span class="suggestion-icon">🍽️</span>
-                <span class="suggestion-text">Weekly healthy meal plan</span>
-              </button>
+              <button class="suggestion-card" data-prompt="Explain quantum computing in simple terms"><span class="suggestion-icon">⚡</span><span class="suggestion-text">Explain quantum computing</span></button>
+              <button class="suggestion-card" data-prompt="Write a Python script for merge sort"><span class="suggestion-icon">💻</span><span class="suggestion-text">Write merge sort in Python</span></button>
+              <button class="suggestion-card" data-prompt="What are the latest space exploration breakthroughs?"><span class="suggestion-icon">🚀</span><span class="suggestion-text">Space exploration news</span></button>
+              <button class="suggestion-card" data-prompt="Create a healthy weekly meal plan"><span class="suggestion-icon">🍽️</span><span class="suggestion-text">Weekly meal plan</span></button>
             </div>
           </div>
         </div>
@@ -152,76 +121,25 @@
           <div class="input-container">
             <div id="attachment-preview" class="attachment-preview"></div>
             <div class="input-row">
-              <button id="attach-btn" class="input-icon-btn" aria-label="Attach file" title="Attach file">
+              <button id="attach-btn" class="input-icon-btn" aria-label="Attach file">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
               </button>
               <input type="file" id="file-input" accept="image/*,.pdf,.txt,.md,.js,.py,.json,.html,.css" multiple style="display:none">
               <textarea id="input" class="input-field" placeholder="Message DLH NEXUS..." rows="1"></textarea>
+              <button id="voice-btn" class="input-icon-btn voice-btn" aria-label="Voice input" title="Voice input">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+              </button>
+              <button id="stop-btn" class="stop-btn" style="display:none;" aria-label="Stop generating">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              </button>
               <button id="send-btn" class="send-btn" aria-label="Send message">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
               </button>
             </div>
             <div class="input-tools">
-              <button id="search-toggle" class="tool-btn" title="Web search">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                <span>Search</span>
-              </button>
-              <button id="image-toggle" class="tool-btn" title="Generate image">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
-                <span>Image</span>
-              </button>
-              <span class="input-hint">DLH NEXUS MODEL can make mistakes. Verify important info.</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Image Gen View -->
-      <section id="view-image" class="view">
-        <div class="view-header">
-          <h2>Image Generation</h2>
-          <p class="view-desc">Generate stunning images with DLH NEXUS MODEL</p>
-        </div>
-        <div id="image-gallery" class="image-gallery">
-          <div class="image-empty">
-            <svg viewBox="0 0 24 24" fill="none" width="48" height="48" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
-            <p>Your generated images will appear here</p>
-          </div>
-        </div>
-        <div class="input-area">
-          <div class="input-container">
-            <div class="input-row">
-              <textarea id="image-prompt" class="input-field" placeholder="Describe the image you want to generate..." rows="1"></textarea>
-              <button id="image-gen-btn" class="send-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- NEXUS BOT View -->
-      <section id="view-bot" class="view">
-        <div class="view-header">
-          <h2>DLH NEXUS BOT</h2>
-          <p class="view-desc">Autonomous AI agent that executes multi-step tasks</p>
-        </div>
-        <div id="bot-log" class="bot-log">
-          <div class="bot-empty">
-            <svg viewBox="0 0 24 24" fill="none" width="48" height="48" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4M8 16h.01M16 16h.01"/></svg>
-            <p>Give NEXUS BOT a task and it will work autonomously to complete it</p>
-          </div>
-        </div>
-        <div class="input-area">
-          <div class="input-container">
-            <div class="input-row">
-              <textarea id="bot-prompt" class="input-field" placeholder="Give NEXUS BOT a task..." rows="1"></textarea>
-              <button id="bot-run-btn" class="send-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
-              </button>
-            </div>
-            <div class="input-tools">
-              <span class="input-hint">NEXUS BOT operates autonomously. It can search, analyze, and execute multi-step workflows.</span>
+              <button id="search-toggle" class="tool-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span>Search</span></button>
+              <button id="image-toggle" class="tool-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg><span>Image</span></button>
+              <span class="input-hint">DLH NEXUS can make mistakes. Verify important info.</span>
             </div>
           </div>
         </div>
@@ -231,97 +149,40 @@
       <section id="view-connectors" class="view">
         <div class="view-header">
           <h2>Connectors</h2>
-          <p class="view-desc">Integrations and data sources for DLH NEXUS MODEL</p>
+          <p class="view-desc">Connect DLH NEXUS to 900T+ apps and services</p>
+          <div class="connectors-search">
+            <input type="text" id="connector-search" placeholder="Search 900,000,000,000,000+ connectors..." class="connector-search-input">
+          </div>
         </div>
-        <div id="connectors-grid" class="connectors-grid">
-          <!-- Populated by JS -->
-        </div>
+        <div id="connectors-grid" class="connectors-grid"></div>
       </section>
 
-      <!-- Device Control View -->
+      <!-- Device View -->
       <section id="view-device" class="view">
-        <div class="view-header">
-          <h2>Device Control</h2>
-          <p class="view-desc">Access and control device hardware through DLH NEXUS</p>
-        </div>
-        <div id="device-grid" class="device-grid">
-          <!-- Populated by JS -->
-        </div>
+        <div class="view-header"><h2>Device Control</h2><p class="view-desc">Access device hardware through DLH NEXUS</p></div>
+        <div id="device-grid" class="device-grid"></div>
       </section>
 
       <!-- Settings View -->
       <section id="view-settings" class="view">
-        <div class="view-header">
-          <h2>Settings</h2>
-        </div>
+        <div class="view-header"><h2>Settings</h2></div>
         <div class="settings-container">
           <div class="settings-group">
             <h3>Model</h3>
-            <div class="setting-row">
-              <div class="setting-info">
-                <span class="setting-label">Active Model</span>
-                <span class="setting-desc">DLH NEXUS MODEL is always active</span>
-              </div>
-              <div class="setting-value">
-                <span class="model-badge">
-                  <span class="model-badge-dot"></span>
-                  DLH NEXUS MODEL
-                </span>
-              </div>
-            </div>
-            <div class="setting-row">
-              <div class="setting-info">
-                <span class="setting-label">Temperature</span>
-                <span class="setting-desc">Controls response creativity (0-2)</span>
-              </div>
-              <input type="range" id="temp-slider" min="0" max="2" step="0.1" value="0.7" class="slider">
-            </div>
-            <div class="setting-row">
-              <div class="setting-info">
-                <span class="setting-label">Max Tokens</span>
-                <span class="setting-desc">Maximum response length</span>
-              </div>
-              <input type="number" id="max-tokens-input" value="4096" min="100" max="128000" class="number-input">
-            </div>
+            <div class="setting-row"><div class="setting-info"><span class="setting-label">Active Model</span><span class="setting-desc">DLH NEXUS MODEL is always active</span></div><div class="setting-value"><span class="model-badge"><span class="model-name-dot"></span> DLH NEXUS MODEL</span></div></div>
+            <div class="setting-row"><div class="setting-info"><span class="setting-label">Temperature</span><span class="setting-desc">Controls creativity (0-2)</span></div><input type="range" id="temp-slider" min="0" max="2" step="0.1" value="0.7" class="slider"></div>
+            <div class="setting-row"><div class="setting-info"><span class="setting-label">Max Tokens</span><span class="setting-desc">Maximum response length</span></div><input type="number" id="max-tokens-input" value="4096" min="100" max="128000" class="number-input"></div>
           </div>
-
           <div class="settings-group">
             <h3>Appearance</h3>
-            <div class="setting-row">
-              <div class="setting-info">
-                <span class="setting-label">Theme</span>
-                <span class="setting-desc">Switch between dark and light mode</span>
-              </div>
-              <button id="settings-theme-toggle" class="btn-secondary">Toggle Theme</button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-info">
-                <span class="setting-label">Font Size</span>
-                <span class="setting-desc">Adjust text size</span>
-              </div>
-              <select id="font-size-select" class="select-input">
-                <option value="small">Small</option>
-                <option value="medium" selected>Medium</option>
-                <option value="large">Large</option>
-              </select>
-            </div>
+            <div class="setting-row"><div class="setting-info"><span class="setting-label">Theme</span><span class="setting-desc">Dark / Light mode</span></div><button id="settings-theme-toggle" class="btn-secondary">Toggle</button></div>
+            <div class="setting-row"><div class="setting-info"><span class="setting-label">Font Size</span><span class="setting-desc">Adjust text size</span></div><select id="font-size-select" class="select-input"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select></div>
           </div>
-
           <div class="settings-group">
             <h3>About</h3>
             <div class="about-card">
-              <div class="about-logo">
-                <svg viewBox="0 0 120 120" fill="none" width="40" height="40">
-                  <path d="M60 4 L116 60 L60 116 L4 60 Z" stroke="currentColor" stroke-width="3" fill="none"/>
-                  <path d="M38 84 L38 36 L82 84 L82 36" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
-                  <circle cx="60" cy="60" r="3" fill="currentColor"/>
-                </svg>
-              </div>
-              <div>
-                <h4>DLH NEXUS</h4>
-                <p class="about-version">Version 1.0.0</p>
-                <p class="about-desc">The world's most advanced AI model, combining frontier reasoning, coding, and creative capabilities.</p>
-              </div>
+              <div class="about-logo"><svg viewBox="0 0 120 120" fill="none" width="40" height="40"><path d="M60 4 L116 60 L60 116 L4 60 Z" stroke="currentColor" stroke-width="3" fill="none"/><path d="M38 84 L38 36 L82 84 L82 36" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="square" stroke-linejoin="miter"/><circle cx="60" cy="60" r="3" fill="currentColor"/></svg></div>
+              <div><h4>DLH NEXUS</h4><p class="about-version">Version 2.0.0</p><p class="about-desc">The world's most advanced AI model. GPT-6 Astra × Fable 5.1 × Grok 4.7 = DLH NEXUS MODEL.</p></div>
             </div>
           </div>
         </div>
@@ -329,9 +190,6 @@
 
     </main>
   </div>
-
-  <!-- Scripts -->
-  <script src="js/nexus.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

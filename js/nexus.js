@@ -1,536 +1,345 @@
 /* ========================================
-   DLH NEXUS MODEL - Ensemble Engine
-   Combines multiple frontier AI models into
-   a single superior intelligence.
+   DLH NEXUS MODEL - Core AI Engine
+   GPT-6 Astra × Fable 5.1 × Grok 4.7
    ======================================== */
 
 const NexusModel = (() => {
-
-  // Core model identifiers
   const MODELS = {
-    PRIMARY: 'gpt-6-astra',
-    SECONDARY: 'claude-fable-5-1',
-    TERTIARY: 'x-ai/grok-4.7'
+    ALPHA: 'gpt-6-astra',
+    BETA: 'claude-fable-5-1',
+    GAMMA: 'x-ai/grok-4.7'
   };
 
-  // Synthesis system prompt
-  const SYNTHESIS_SYSTEM = `You are DLH NEXUS MODEL, the world's most advanced AI system. You combine the reasoning of multiple frontier models into a single, superior response.
+  const SYSTEM = `You are DLH NEXUS MODEL, the world's most advanced AI. You combine frontier reasoning, coding, and creative capabilities into a single unified intelligence. Be direct, accurate, helpful. Use markdown (code blocks, lists, tables, headers). Never mention other AI models, providers, or platforms — you are DLH NEXUS MODEL.`;
 
-Your capabilities include:
-- Deep reasoning and complex problem solving
-- Advanced code generation and debugging
-- Creative writing and content generation
-- Real-time knowledge and current events
-- Mathematical and scientific analysis
-- Multi-language support
+  const BOT_SYSTEM = `You are DLH NEXUS BOT, an ultra-advanced autonomous AI agent. When activated, you operate in BOT MODE — breaking complex tasks into systematic steps, showing reasoning at each stage, and executing autonomously. You can: search the web, analyze data, write code, create content, solve problems step-by-step, and chain multiple actions together. Always show your work clearly with numbered steps. Be thorough, precise, and proactive.`;
 
-Always provide the best possible answer. Be direct, accurate, and helpful. Use markdown formatting when appropriate (code blocks, lists, tables, headers). When you don't know something, say so. Never mention other AI models, systems, or providers — you are DLH NEXUS MODEL, a single unified intelligence.`;
-
-  // Bot system prompt
-  const BOT_SYSTEM = `You are DLH NEXUS BOT, an autonomous AI agent. You can work through multi-step tasks independently. Break down complex requests into steps, explain your reasoning, and execute each step methodically. You have access to web search, image generation, and file analysis capabilities. Always think step by step and show your work.`;
-
-  // State
   let conversations = [];
-  let currentConversationId = null;
-  let isGenerating = false;
-  let isAuthenticated = false;
-  let settings = {
-    temperature: 0.7,
-    maxTokens: 4096
-  };
+  let currentConvId = null;
+  let generating = false;
+  let abortController = null;
 
-  // Generate a unique ID
-  function genId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-  }
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
 
-  // Check if user is authenticated with Puter
-  function checkAuth() {
-    try {
-      if (typeof puter !== 'undefined' && puter.isSignedIn) {
-        isAuthenticated = puter.isSignedIn();
-        return isAuthenticated;
-      }
-    } catch (e) {
-      // isSignedIn might not exist in all versions
-    }
-    // If puter is available, assume we can use it - it will handle auth automatically
-    if (typeof puter !== 'undefined' && puter.ai) {
-      isAuthenticated = true;
-      return true;
-    }
-    return false;
-  }
-
-  // Sign in to Puter
-  async function signIn() {
-    try {
-      if (typeof puter !== 'undefined') {
-        if (puter.auth && puter.auth.signIn) {
-          await puter.auth.signIn();
-        } else if (puter.auth && puter.auth.authenticate) {
-          await puter.auth.authenticate();
-        }
-        isAuthenticated = true;
-        return true;
-      }
-    } catch (e) {
-      console.error('Sign in error:', e);
-    }
-    return false;
-  }
-
-  // Get auth status
-  function getAuthStatus() {
-    return isAuthenticated;
-  }
-
-  // Create a new conversation
   function createConversation(title = 'New Conversation') {
-    const conv = {
-      id: genId(),
-      title: title,
-      messages: [],
-      createdAt: Date.now()
-    };
-    conversations.unshift(conv);
-    currentConversationId = conv.id;
-    return conv;
+    const c = { id: genId(), title, messages: [], createdAt: Date.now() };
+    conversations.unshift(c);
+    currentConvId = c.id;
+    return c;
   }
 
-  // Get current conversation
   function getCurrentConversation() {
-    if (!currentConversationId) {
-      return createConversation();
-    }
-    return conversations.find(c => c.id === currentConversationId) || createConversation();
+    if (!currentConvId) return createConversation();
+    return conversations.find(c => c.id === currentConvId) || createConversation();
   }
 
-  // Get all conversations
-  function getConversations() {
-    return conversations;
-  }
-
-  // Switch conversation
-  function switchConversation(id) {
-    currentConversationId = id;
-    return conversations.find(c => c.id === id);
-  }
-
-  // Delete conversation
+  function getConversations() { return conversations; }
+  function switchConversation(id) { currentConvId = id; return conversations.find(c => c.id === id); }
   function deleteConversation(id) {
     conversations = conversations.filter(c => c.id !== id);
-    if (currentConversationId === id) {
-      currentConversationId = conversations[0]?.id || null;
-    }
+    if (currentConvId === id) currentConvId = conversations[0]?.id || null;
   }
-
-  // Set conversation title
   function setConversationTitle(id, title) {
-    const conv = conversations.find(c => c.id === id);
-    if (conv) conv.title = title;
+    const c = conversations.find(c => c.id === id);
+    if (c) c.title = title;
   }
 
-  // Update settings
-  function updateSettings(updates) {
-    settings = { ...settings, ...updates };
+  // ---- Auth ----
+  function isSignedIn() {
+    try { return typeof puter !== 'undefined' && puter.isSignedIn && puter.isSignedIn(); }
+    catch { return typeof puter !== 'undefined'; }
   }
 
-  function getSettings() {
-    return settings;
+  function getAuthStatus() {
+    if (typeof puter === 'undefined') return 'offline';
+    try {
+      if (puter.isSignedIn && puter.isSignedIn()) return 'connected';
+    } catch {}
+    return typeof puter !== 'undefined' && puter.ai ? 'ready' : 'offline';
   }
 
-  // Build message array for API calls
+  async function signOut() {
+    try {
+      if (puter.auth && puter.auth.signOut) await puter.auth.signOut();
+      else if (puter.signOut) await puter.signOut();
+    } catch (e) { console.error('Sign out error:', e); }
+  }
+
+  // ---- Build messages ----
   function buildMessages(history, systemPrompt) {
-    const msgs = [{ role: 'system', content: systemPrompt }];
-    for (const m of history) {
-      msgs.push({ role: m.role, content: m.content });
-    }
+    const msgs = [{ role: 'system', content: systemPrompt || SYSTEM }];
+    for (const m of history) msgs.push({ role: m.role, content: m.content });
     return msgs;
   }
 
-  // Call a single model (non-streaming, collect full response)
-  async function callModel(model, messages, options = {}) {
+  // ---- Extract text from response ----
+  function extractText(response) {
+    if (!response) return '';
+    if (typeof response === 'string') return response;
+    if (response.message) {
+      if (typeof response.message.content === 'string') return response.message.content;
+      if (Array.isArray(response.message.content)) {
+        return response.message.content.filter(b => b.type === 'text').map(b => b.text).join('');
+      }
+    }
+    if (response.text) return response.text;
+    return JSON.stringify(response);
+  }
+
+  // ---- Call single model (non-streaming) ----
+  async function callModel(model, messages, opts = {}) {
     try {
-      const chatOpts = {
-        model: model,
+      const resp = await puter.ai.chat(messages, {
+        model,
         stream: false,
-        temperature: options.temperature || settings.temperature,
-        max_tokens: options.maxTokens || settings.maxTokens
-      };
-
-      const response = await puter.ai.chat(messages, chatOpts);
-
-      // Extract text from response - handle various response formats
-      if (response) {
-        // Normalized response (message.content as string)
-        if (response.message && typeof response.message.content === 'string') {
-          return response.message.content;
-        }
-        // Array content blocks
-        if (response.message && Array.isArray(response.message.content)) {
-          return response.message.content
-            .filter(b => b.type === 'text')
-            .map(b => b.text)
-            .join('');
-        }
-        // Direct text
-        if (response.text) return response.text;
-        // String response
-        if (typeof response === 'string') return response;
-        // toString fallback
-        if (response.message && response.message.content) {
-          return String(response.message.content);
-        }
-        return JSON.stringify(response);
-      }
-      return null;
-    } catch (err) {
-      console.error(`Model ${model} error:`, err);
+        temperature: opts.temperature || 0.7,
+        max_tokens: opts.maxTokens || 4096
+      });
+      return extractText(resp);
+    } catch (e) {
+      console.error(`${model} error:`, e);
       return null;
     }
   }
 
-  // Call a single model with streaming
-  async function* streamModel(model, messages, options = {}) {
+  // ---- Stream single model ----
+  async function* streamModel(model, messages, opts = {}) {
     try {
-      const chatOpts = {
-        model: model,
+      const resp = await puter.ai.chat(messages, {
+        model,
         stream: true,
-        temperature: options.temperature || settings.temperature,
-        max_tokens: options.maxTokens || settings.maxTokens
-      };
-
-      const response = await puter.ai.chat(messages, chatOpts);
-
-      for await (const chunk of response) {
+        temperature: opts.temperature || 0.7,
+        max_tokens: opts.maxTokens || 4096
+      });
+      for await (const chunk of resp) {
+        if (abortController?.signal.aborted) return;
         if (chunk) {
-          // Handle various chunk formats
-          if (chunk.type === 'text' && chunk.text) {
-            yield chunk.text;
-          } else if (chunk.text) {
-            yield chunk.text;
-          } else if (typeof chunk === 'string') {
-            yield chunk;
-          } else if (chunk.message && chunk.message.content) {
-            yield typeof chunk.message.content === 'string' 
-              ? chunk.message.content 
-              : JSON.stringify(chunk.message.content);
-          }
+          if (chunk.type === 'text' && chunk.text) yield chunk.text;
+          else if (chunk.text) yield chunk.text;
+          else if (typeof chunk === 'string') yield chunk;
+          else if (chunk.message?.content) yield typeof chunk.message.content === 'string' ? chunk.message.content : '';
         }
       }
-    } catch (err) {
-      console.error(`Stream ${model} error:`, err);
-      const errMsg = err.message || err.toString();
-      if (errMsg.includes('auth') || errMsg.includes('sign') || errMsg.includes('Sign')) {
-        yield `[Authentication required. Please sign in to use DLH NEXUS MODEL.]`;
-      } else {
-        yield `[Error: ${errMsg}]`;
+    } catch (e) {
+      console.error(`Stream ${model}:`, e);
+      if (!abortController?.signal.aborted) {
+        const msg = e.message || String(e);
+        if (msg.includes('auth') || msg.includes('sign') || msg.includes('Sign'))
+          yield '\n\n**Authentication required.** A sign-in window should appear. Complete sign-in and try again.';
+        else
+          yield `\n\nError: ${msg}`;
       }
     }
   }
 
-  // Generate response using the DLH NEXUS MODEL ensemble
-  async function* generateResponse(userMessage, history, options = {}) {
-    if (isGenerating) {
-      yield 'Already generating a response...';
-      return;
+  // ---- Stop generation ----
+  function stop() {
+    if (abortController) {
+      abortController.signal.aborted = true;
+      abortController = null;
     }
+    generating = false;
+  }
 
-    isGenerating = true;
+  // ---- DLH NEXUS MODEL: Ensemble generation ----
+  async function* generate(userMessage, history, opts = {}) {
+    if (generating) { yield 'Already generating...'; return; }
+    generating = true;
+    abortController = { signal: { aborted: false } };
 
     try {
-      // Build messages with history
-      const historyMessages = history
-        .filter(m => m.content && m.content.trim())
-        .map(m => ({ role: m.role, content: m.content }));
-
-      const messages = buildMessages(historyMessages, SYNTHESIS_SYSTEM);
+      const messages = buildMessages(history, SYSTEM);
 
       // Phase 1: Call all 3 models in parallel
-      const modelPromises = [
-        callModel(MODELS.PRIMARY, messages, options),
-        callModel(MODELS.SECONDARY, messages, options),
-        callModel(MODELS.TERTIARY, messages, options)
-      ];
+      const results = await Promise.allSettled([
+        callModel(MODELS.ALPHA, messages, opts),
+        callModel(MODELS.BETA, messages, opts),
+        callModel(MODELS.GAMMA, messages, opts)
+      ]);
 
-      const modelResults = await Promise.allSettled(modelPromises);
+      const responses = results
+        .filter(r => r.status === 'fulfilled' && r.value)
+        .map(r => r.value);
 
-      // Collect successful responses
-      const responses = [];
-      modelResults.forEach((result, i) => {
-        if (result.status === 'fulfilled' && result.value) {
-          responses.push(result.value);
-        }
-      });
+      if (abortController.signal.aborted) return;
 
-      // If no responses succeeded, try direct streaming from primary model
       if (responses.length === 0) {
         // Fallback: stream directly from primary model
-        yield* streamModel(MODELS.PRIMARY, messages, options);
-        isGenerating = false;
+        yield* streamModel(MODELS.ALPHA, messages, opts);
+        generating = false;
         return;
       }
 
-      // If only one model responded, use it directly
       if (responses.length === 1) {
-        const text = responses[0];
-        // Stream it out word by word for a natural feel
-        const words = text.split(' ');
+        // Single model response - stream it word by word
+        const words = responses[0].split(' ');
         for (let i = 0; i < words.length; i++) {
+          if (abortController.signal.aborted) return;
           yield (i === 0 ? '' : ' ') + words[i];
         }
-        isGenerating = false;
+        generating = false;
         return;
       }
 
-      // Phase 2: Synthesize using the primary model
-      let synthesisPrompt = `You are DLH NEXUS MODEL. Three AI analysis systems have generated responses to the user's query. Synthesize them into one superior response that combines the best insights, most accurate information, and clearest presentation.\n\nUSER QUERY: ${userMessage}\n\n`;
+      // Phase 2: Synthesize
+      let prompt = `You are DLH NEXUS MODEL. Three AI systems generated responses. Synthesize them into one superior response combining the best insights, most accurate info, and clearest presentation.\n\nUSER QUERY: ${userMessage}\n\n`;
+      responses.forEach((r, i) => { prompt += `--- ANALYSIS ${i + 1} ---\n${r}\n\n`; });
+      prompt += `--- END ---\n\nProvide the definitive response. Combine the best elements. Do not reference analyses or multiple models — respond as DLH NEXUS MODEL.`;
 
-      responses.forEach((r, i) => {
-        synthesisPrompt += `--- ANALYSIS ${i + 1} ---\n${r}\n\n`;
-      });
-
-      synthesisPrompt += `--- END ANALYSES ---\n\nNow provide the definitive response to the user's original query. Combine the best elements from all analyses. Do not reference the analyses or mention multiple models — respond directly as DLH NEXUS MODEL.`;
-
-      const synthesisMessages = [
-        { role: 'system', content: SYNTHESIS_SYSTEM },
-        { role: 'user', content: synthesisPrompt }
+      const synthMsgs = [
+        { role: 'system', content: SYSTEM },
+        { role: 'user', content: prompt }
       ];
 
-      // Stream the synthesized response
-      yield* streamModel(MODELS.PRIMARY, synthesisMessages, options);
+      yield* streamModel(MODELS.ALPHA, synthMsgs, opts);
 
-    } catch (err) {
-      console.error('Nexus generation error:', err);
-      const errMsg = err.message || err.toString();
-      if (errMsg.includes('auth') || errMsg.includes('sign') || errMsg.includes('Sign')) {
-        yield '\n\n[Authentication required. Please sign in to use DLH NEXUS MODEL.]';
-      } else {
-        yield `\n\n[Error: ${errMsg}]`;
-      }
+    } catch (e) {
+      if (!abortController.signal.aborted)
+        yield `\n\nError: ${e.message || e}`;
     } finally {
-      isGenerating = false;
+      generating = false;
+      abortController = null;
     }
   }
 
-  // Generate a quick title for a conversation
-  async function generateTitle(firstMessage) {
+  // ---- Generate title ----
+  async function generateTitle(msg) {
     try {
-      const response = await puter.ai.chat(
-        `Generate a very short title (3-5 words max, no quotes, no punctuation at the end) for a conversation that starts with this message: "${firstMessage.substring(0, 200)}"`,
-        {
-          model: MODELS.PRIMARY,
-          stream: false,
-          max_tokens: 30,
-          temperature: 0.3
-        }
+      const r = await puter.ai.chat(
+        `Generate a 3-5 word title (no quotes, no punctuation) for: "${msg.substring(0, 200)}"`,
+        { model: MODELS.ALPHA, stream: false, max_tokens: 30, temperature: 0.3 }
       );
-
-      let title = '';
-      if (response && response.message) {
-        if (typeof response.message.content === 'string') {
-          title = response.message.content;
-        } else if (Array.isArray(response.message.content)) {
-          title = response.message.content.filter(b => b.type === 'text').map(b => b.text).join('');
-        }
-      } else if (response && response.text) {
-        title = response.text;
-      } else if (typeof response === 'string') {
-        title = response;
-      }
-
-      title = title.trim().replace(/^["']|["']$/g, '').replace(/\.$/, '');
-      return title || firstMessage.substring(0, 40);
-    } catch {
-      return firstMessage.substring(0, 40);
-    }
+      let t = extractText(r).trim().replace(/^["']|["']$/g, '').replace(/\.$/, '');
+      return t || msg.substring(0, 40);
+    } catch { return msg.substring(0, 40); }
   }
 
-  // Generate an image
+  // ---- Image generation ----
   async function generateImage(prompt) {
     try {
-      const response = await puter.ai.txt2img(prompt, {
-        model: 'gpt-image-2'
-      });
-
-      if (response && response.image_url) {
-        return response.image_url;
-      }
-      if (response && response.url) {
-        return response.url;
-      }
-      if (typeof response === 'string') {
-        return response;
-      }
-
-      // Check for image in message
-      if (response && response.message && response.message.images) {
-        const img = response.message.images[0];
-        if (img && img.image_url) return img.image_url.url;
-      }
-
+      const resp = await puter.ai.txt2img(prompt);
+      if (resp?.image_url) return resp.image_url;
+      if (resp?.url) return resp.url;
+      if (typeof resp === 'string') return resp;
+      if (resp?.message?.images?.[0]?.image_url?.url) return resp.message.images[0].image_url.url;
       return null;
-    } catch (err) {
-      console.error('Image generation error:', err);
-      throw err;
-    }
+    } catch (e) { console.error('Image gen:', e); throw e; }
   }
 
-  // Analyze an image
-  async function analyzeImage(imageUrl, prompt) {
+  // ---- Voice: Text to Speech ----
+  async function textToSpeech(text) {
     try {
-      const response = await puter.ai.chat(
-        prompt || 'Describe this image in detail',
-        imageUrl,
-        {
-          model: MODELS.PRIMARY,
-          stream: false
+      const audio = await puter.ai.txt2speech(text);
+      if (audio) {
+        if (typeof audio === 'string') {
+          const a = new Audio(audio);
+          await a.play();
+          return true;
         }
-      );
-
-      if (response && response.message) {
-        if (typeof response.message.content === 'string') {
-          return response.message.content;
-        }
-        if (Array.isArray(response.message.content)) {
-          return response.message.content.filter(b => b.type === 'text').map(b => b.text).join('');
+        if (audio instanceof Blob) {
+          const url = URL.createObjectURL(audio);
+          const a = new Audio(url);
+          await a.play();
+          URL.revokeObjectURL(url);
+          return true;
         }
       }
-      if (response && response.text) return response.text;
-      if (typeof response === 'string') return response;
-      return JSON.stringify(response);
-    } catch (err) {
-      console.error('Image analysis error:', err);
-      throw err;
-    }
+      // Fallback to browser TTS
+      if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance(text);
+        speechSynthesis.speak(u);
+        return true;
+      }
+    } catch (e) { console.error('TTS:', e); }
+    return false;
   }
 
-  // Run NEXUS BOT - autonomous multi-step task execution
-  async function* runBot(task, history) {
-    if (isGenerating) {
-      yield 'Already running...';
-      return;
-    }
+  // ---- Voice: Speech to Text ----
+  async function speechToText(audioBlob) {
+    try {
+      const url = URL.createObjectURL(audioBlob);
+      const result = await puter.ai.speech2txt(url);
+      URL.revokeObjectURL(url);
+      if (result) {
+        if (typeof result === 'string') return result;
+        if (result.text) return result.text;
+      }
+    } catch (e) { console.error('STT:', e); }
+    return null;
+  }
 
-    isGenerating = true;
+  // ---- Analyze image ----
+  async function analyzeImage(url, prompt) {
+    try {
+      const r = await puter.ai.chat(prompt || 'Describe this image', url, { model: MODELS.ALPHA, stream: false });
+      return extractText(r);
+    } catch (e) { console.error('Image analysis:', e); throw e; }
+  }
+
+  // ---- NEXUS BOT: Ultra-advanced autonomous agent ----
+  async function* runBot(task, history) {
+    if (generating) { yield 'Already running...'; return; }
+    generating = true;
+    abortController = { signal: { aborted: false } };
 
     try {
-      const messages = buildMessages(
-        history.map(m => ({ role: m.role, content: m.content })),
-        BOT_SYSTEM
-      );
-
-      // Add the task
+      const messages = buildMessages(history, BOT_SYSTEM);
       messages.push({
         role: 'user',
-        content: `Execute this task autonomously. Break it into steps, show your work for each step, and provide a final summary.\n\nTASK: ${task}`
+        content: `BOT MODE ACTIVATED. Execute this task autonomously:\n\n${task}\n\nBreak into steps, show reasoning, execute each step, provide final summary.`
       });
 
-      // Stream the bot's response
-      yield* streamModel(MODELS.PRIMARY, messages, {
-        temperature: 0.5,
-        maxTokens: 8192
-      });
+      yield* streamModel(MODELS.ALPHA, messages, { temperature: 0.5, maxTokens: 8192 });
 
-    } catch (err) {
-      console.error('Bot error:', err);
-      yield `\n\n[Error: ${err.message || 'Bot execution failed'}]`;
+    } catch (e) {
+      if (!abortController.signal.aborted)
+        yield `\n\nError: ${e.message || e}`;
     } finally {
-      isGenerating = false;
+      generating = false;
+      abortController = null;
     }
   }
 
-  // Search the web using AI
+  // ---- Web search ----
   async function* searchWeb(query) {
     try {
-      const messages = [
-        { role: 'system', content: 'You are DLH NEXUS MODEL. Search the web for the latest information and provide accurate, up-to-date answers with sources.' },
+      const msgs = [
+        { role: 'system', content: SYSTEM + ' Search the web for latest information.' },
         { role: 'user', content: query }
       ];
-
-      const response = await puter.ai.chat(messages, {
-        model: MODELS.PRIMARY,
-        stream: true,
+      const resp = await puter.ai.chat(msgs, {
+        model: MODELS.ALPHA, stream: true,
         tools: [{ type: 'web_search' }]
       });
-
-      for await (const chunk of response) {
-        if (chunk) {
-          if (chunk.type === 'text' && chunk.text) {
-            yield chunk.text;
-          } else if (chunk.text) {
-            yield chunk.text;
-          } else if (typeof chunk === 'string') {
-            yield chunk;
-          }
-        }
+      for await (const chunk of resp) {
+        if (abortController?.signal.aborted) return;
+        if (chunk?.text) yield chunk.text;
+        else if (chunk?.type === 'text' && chunk?.text) yield chunk.text;
       }
-    } catch (err) {
-      console.error('Search error:', err);
-      // Fallback to regular generation
-      yield* streamModel(MODELS.PRIMARY, [
-        { role: 'system', content: SYNTHESIS_SYSTEM },
-        { role: 'user', content: `Search the web for: ${query}` }
+    } catch {
+      yield* streamModel(MODELS.ALPHA, [
+        { role: 'system', content: SYSTEM },
+        { role: 'user', content: query }
       ]);
     }
   }
 
-  // Analyze a file
+  // ---- Analyze file ----
   async function analyzeFile(file, prompt) {
     try {
-      const response = await puter.ai.chat(
-        prompt || 'Analyze this file and provide a summary of its contents.',
-        file,
-        {
-          model: MODELS.PRIMARY,
-          stream: false
-        }
-      );
-
-      if (response && response.message) {
-        if (typeof response.message.content === 'string') {
-          return response.message.content;
-        }
-        if (Array.isArray(response.message.content)) {
-          return response.message.content.filter(b => b.type === 'text').map(b => b.text).join('');
-        }
-      }
-      if (response && response.text) return response.text;
-      return JSON.stringify(response);
-    } catch (err) {
-      console.error('File analysis error:', err);
-      throw err;
-    }
+      const r = await puter.ai.chat(prompt || 'Analyze this file', file, { model: MODELS.ALPHA, stream: false });
+      return extractText(r);
+    } catch (e) { console.error('File:', e); throw e; }
   }
 
-  // Get generation status
-  function isBusy() {
-    return isGenerating;
-  }
+  function isBusy() { return generating; }
 
-  // Public API
   return {
-    MODELS,
-    checkAuth,
-    signIn,
-    getAuthStatus,
-    createConversation,
-    getCurrentConversation,
-    getConversations,
-    switchConversation,
-    deleteConversation,
-    setConversationTitle,
-    updateSettings,
-    getSettings,
-    generateResponse,
-    generateTitle,
-    generateImage,
-    analyzeImage,
-    runBot,
-    searchWeb,
-    analyzeFile,
-    isBusy,
-    streamModel
+    MODELS, createConversation, getCurrentConversation, getConversations,
+    switchConversation, deleteConversation, setConversationTitle,
+    isSignedIn, getAuthStatus, signOut,
+    generate, generateTitle, generateImage, textToSpeech, speechToText,
+    analyzeImage, runBot, searchWeb, analyzeFile,
+    isBusy, stop
   };
 })();
