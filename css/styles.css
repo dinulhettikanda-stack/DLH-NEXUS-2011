@@ -95,11 +95,13 @@ a{color:var(--text);text-decoration:none}
 
 /* Model name bar (replaces topbar) */
 .model-name-bar{display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-3);position:relative;border-bottom:1px solid var(--divider)}
+.model-name-center{display:flex;align-items:center;gap:var(--space-2)}
 .model-name-dot{width:8px;height:8px;border-radius:var(--radius-full);background:var(--text);animation:pulse 2s infinite}
 .model-name-text{font-size:var(--text-sm);font-weight:600;letter-spacing:-0.01em}
 .theme-toggle-btn{position:absolute;right:var(--space-4);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md);color:var(--text-muted);transition:all var(--transition-fast)}
 .theme-toggle-btn:hover{background:var(--surface-hover);color:var(--text)}
-#menu-toggle{display:none}
+.menu-toggle{display:none;position:absolute;left:var(--space-4);width:32px;height:32px;align-items:center;justify-content:center;border-radius:var(--radius-md);color:var(--text-muted);transition:all var(--transition-fast)}
+.menu-toggle:hover{background:var(--surface-hover);color:var(--text)}
 
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 
@@ -212,7 +214,9 @@ a{color:var(--text);text-decoration:none}
 .connector-info{flex:1;min-width:0}
 .connector-name{font-size:var(--text-sm);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .connector-desc{font-size:var(--text-xs);color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.connector-status{display:flex;align-items:center;gap:var(--space-1);font-size:var(--text-xs);color:var(--text-muted);flex-shrink:0}
+.connector-status{display:flex;align-items:center;gap:var(--space-1);font-size:var(--text-xs);color:var(--text-muted);flex-shrink:0;cursor:pointer;padding:var(--space-1) var(--space-2);border-radius:var(--radius-sm);transition:all var(--transition-fast)}
+.connector-status:hover{background:var(--surface-hover);color:var(--text)}
+.connector-status.connected{color:var(--text)}
 .connector-status .status-dot{width:8px;height:8px}
 
 /* Device */

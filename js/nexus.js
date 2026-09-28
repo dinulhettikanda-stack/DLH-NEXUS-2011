@@ -45,10 +45,41 @@ const NexusModel = (() => {
   }
 
   // ---- Auth ----
+  let signedIn = false;
+
   function getAuthStatus() {
     if (typeof puter === 'undefined') return 'offline';
-    if (puter.ai && typeof puter.ai.chat === 'function') return 'ready';
-    return 'offline';
+    if (!puter.ai || typeof puter.ai.chat !== 'function') return 'offline';
+    if (signedIn) return 'signed-in';
+    if (typeof puter.isSignedIn === 'function') {
+      try { signedIn = puter.isSignedIn(); } catch(e) {}
+    }
+    return signedIn ? 'signed-in' : 'ready';
+  }
+
+  async function signIn() {
+    if (typeof puter === 'undefined') return false;
+    try {
+      if (puter.auth && typeof puter.auth.signIn === 'function') {
+        await puter.auth.signIn();
+        signedIn = true;
+        return true;
+      } else if (typeof puter.isSignedIn === 'function') {
+        // Trigger sign-in by making a minimal AI call
+        try {
+          await puter.ai.chat('hi', { model: MODELS.ALPHA, stream: false, max_tokens: 1 });
+          signedIn = true;
+          return true;
+        } catch(e) {
+          // Sign-in popup may have appeared
+          return false;
+        }
+      }
+    } catch (e) {
+      console.error('Sign in error:', e);
+      return false;
+    }
+    return false;
   }
 
   async function signOut() {
@@ -56,8 +87,10 @@ const NexusModel = (() => {
       if (puter.auth && puter.auth.signOut) {
         await puter.auth.signOut();
       }
+      signedIn = false;
     } catch (e) {
       console.error('Sign out error:', e);
+      signedIn = false;
     }
   }
 
@@ -321,7 +354,7 @@ const NexusModel = (() => {
   return {
     MODELS, createConversation, getCurrentConversation, getConversations,
     switchConversation, deleteConversation, setConversationTitle,
-    getAuthStatus, signOut,
+    getAuthStatus, signIn, signOut,
     generate, generateTitle, generateImage, speak, transcribeAudio,
     analyzeImage, searchWeb, isBusy, stop
   };

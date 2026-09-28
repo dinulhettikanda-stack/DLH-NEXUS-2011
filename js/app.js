@@ -665,10 +665,32 @@
       info.appendChild(el('div', { class: 'connector-name', text: c.name }));
       info.appendChild(el('div', { class: 'connector-desc', text: c.desc }));
       card.appendChild(info);
-      card.appendChild(el('div', { class: 'connector-status' }, [
+      var connectBtn = el('div', { class: 'connector-status' }, [
         el('span', { class: 'status-dot done' }),
         el('span', { text: 'Connect' })
-      ]));
+      ]);
+      connectBtn.style.cursor = 'pointer';
+      connectBtn.addEventListener('click', async function() {
+        var statusSpan = connectBtn.querySelector('span:last-child');
+        var dotSpan = connectBtn.querySelector('.status-dot');
+        if (statusSpan) statusSpan.textContent = 'Connecting...';
+        if (dotSpan) dotSpan.className = 'status-dot active';
+        var success = await NexusModel.signIn();
+        updateAuthStatus();
+        if (success) {
+          if (statusSpan) statusSpan.textContent = 'Connected';
+          if (dotSpan) dotSpan.className = 'status-dot done';
+          connectBtn.classList.add('connected');
+        } else {
+          if (statusSpan) statusSpan.textContent = 'Sign In Required';
+          if (dotSpan) dotSpan.className = 'status-dot';
+          setTimeout(function() {
+            if (statusSpan) statusSpan.textContent = 'Connect';
+            if (dotSpan) dotSpan.className = 'status-dot done';
+          }, 3000);
+        }
+      });
+      card.appendChild(connectBtn);
       grid.appendChild(card);
     });
   }
@@ -774,14 +796,26 @@
     var signOutBtn = document.getElementById('sign-out-btn');
     if (!btn) return;
     var text = btn.querySelector('.auth-text');
+    var dot = btn.querySelector('.auth-dot');
     var status = NexusModel.getAuthStatus();
     if (status === 'offline') {
-      btn.className = 'auth-btn disconnected'; text.textContent = 'AI Offline';
+      btn.className = 'auth-btn disconnected';
+      if (text) text.textContent = 'AI Offline';
+      if (dot) dot.className = 'auth-dot';
       if (signOutBtn) signOutBtn.style.display = 'none';
       return;
     }
-    btn.className = 'auth-btn ready'; text.textContent = 'Ready';
-    if (signOutBtn) signOutBtn.style.display = 'flex';
+    if (status === 'signed-in') {
+      btn.className = 'auth-btn ready';
+      if (text) text.textContent = 'Signed In';
+      if (dot) dot.className = 'auth-dot active';
+      if (signOutBtn) signOutBtn.style.display = 'flex';
+    } else {
+      btn.className = 'auth-btn ready';
+      if (text) text.textContent = 'Ready';
+      if (dot) dot.className = 'auth-dot active';
+      if (signOutBtn) signOutBtn.style.display = 'none';
+    }
   }
 
   // ---- Init ----
@@ -807,6 +841,35 @@
 
     // Sidebar overlay
     document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
+
+    // Menu toggle (hamburger for mobile)
+    var menuToggle = document.getElementById('menu-toggle');
+    if (menuToggle) {
+      menuToggle.addEventListener('click', function() {
+        var sb = document.getElementById('sidebar');
+        if (sb) sb.classList.toggle('open');
+        var ov = document.getElementById('sidebar-overlay');
+        if (ov) ov.style.display = sb && sb.classList.contains('open') ? 'block' : 'none';
+      });
+    }
+
+    // Auth button (sign in)
+    var authBtn = document.getElementById('auth-btn');
+    if (authBtn) {
+      authBtn.addEventListener('click', async function() {
+        var status = NexusModel.getAuthStatus();
+        if (status === 'signed-in') return; // Already signed in
+        var text = authBtn.querySelector('.auth-text');
+        var originalText = text ? text.textContent : '';
+        if (text) text.textContent = 'Signing in...';
+        var success = await NexusModel.signIn();
+        updateAuthStatus();
+        if (text && !success) {
+          text.textContent = 'Sign In Required';
+          setTimeout(function() { updateAuthStatus(); }, 3000);
+        }
+      });
+    }
 
     // Theme
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
@@ -834,6 +897,9 @@
 
     // Sign out
     document.getElementById('sign-out-btn').addEventListener('click', async function() {
+      var text = document.getElementById('auth-btn').querySelector('.auth-text');
+      var originalText = text ? text.textContent : '';
+      if (text) text.textContent = 'Signing out...';
       await NexusModel.signOut();
       updateAuthStatus();
     });
