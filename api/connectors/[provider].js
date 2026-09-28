@@ -54,19 +54,37 @@ async function exchange(provider, code, req) {
   const clientSecret = process.env[cfg.clientSecret];
   if (!clientId || !clientSecret) throw new Error('OAuth credentials are not configured for ' + provider + '.');
 
-  const params = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    code,
-    redirect_uri: redirectUri(req, provider)
-  });
-  if (provider === 'google') params.set('grant_type', 'authorization_code');
+  let response;
+  if (provider === 'notion') {
+    const basic = Buffer.from(clientId + ':' + clientSecret).toString('base64');
+    response = await fetch(cfg.token, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Basic ' + basic,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri(req, provider)
+      })
+    });
+  } else {
+    const params = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      redirect_uri: redirectUri(req, provider)
+    });
+    if (provider === 'google') params.set('grant_type', 'authorization_code');
 
-  const response = await fetch(cfg.token, {
-    method: 'POST',
-    headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params
-  });
+    response = await fetch(cfg.token, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    });
+  }
   const data = await response.json();
   if (!response.ok || data.error || !data.access_token) {
     throw new Error(data.error_description || data.error || 'OAuth token exchange failed.');
