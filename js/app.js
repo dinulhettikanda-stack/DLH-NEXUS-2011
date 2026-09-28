@@ -371,41 +371,43 @@
     }
 
     function processChunk() {
-      var step = generator.next();
-      if (step.done) {
-        clearTimeout(timeoutId);
-        if (!fullResponse && !timedOut) {
-          fullResponse = 'I apologize, but I was unable to generate a response. Please sign in and try again.';
-          think.textDiv.style.display = 'block';
-          think.textDiv.innerHTML = renderMarkdown(fullResponse);
+      generator.next().then(function(step) {
+        if (step.done) {
+          clearTimeout(timeoutId);
+          if (!fullResponse && !timedOut) {
+            fullResponse = 'I apologize, but I was unable to generate a response. Please sign in and try again.';
+            think.textDiv.style.display = 'block';
+            think.textDiv.innerHTML = renderMarkdown(fullResponse);
+          }
+          conv.messages.push({ role: 'assistant', content: fullResponse });
+          var actions = el('div', { class: 'message-actions' });
+          actions.appendChild(el('button', {
+            class: 'msg-action-btn', title: 'Copy',
+            onclick: function() { navigator.clipboard.writeText(fullResponse).catch(function() {}); },
+            html: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
+          }));
+          actions.appendChild(el('button', {
+            class: 'msg-action-btn', title: 'Retry',
+            onclick: function() { regenerateMessage(think.msg); },
+            html: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
+          }));
+          think.textDiv.parentElement.appendChild(actions);
+          setGenerating(false);
+          scrollToBottom();
+          return;
         }
-        conv.messages.push({ role: 'assistant', content: fullResponse });
-        var actions = el('div', { class: 'message-actions' });
-        actions.appendChild(el('button', {
-          class: 'msg-action-btn', title: 'Copy',
-          onclick: function() { navigator.clipboard.writeText(fullResponse).catch(function() {}); },
-          html: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
-        }));
-        actions.appendChild(el('button', {
-          class: 'msg-action-btn', title: 'Retry',
-          onclick: function() { regenerateMessage(think.msg); },
-          html: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
-        }));
-        think.textDiv.parentElement.appendChild(actions);
-        setGenerating(false);
-        scrollToBottom();
-        return;
-      }
 
-      Promise.resolve(step.value).then(function(chunk) {
+        var chunk = step.value;
         if (timedOut) return;
         if (firstChunk) {
           think.status.style.display = 'none';
           think.textDiv.style.display = 'block';
           firstChunk = false;
         }
-        fullResponse += chunk;
-        think.textDiv.innerHTML = renderMarkdown(fullResponse);
+        if (chunk != null) {
+          fullResponse += String(chunk);
+          think.textDiv.innerHTML = renderMarkdown(fullResponse);
+        }
         scrollToBottom();
         setTimeout(processChunk, 0);
       }).catch(function(e) {
@@ -449,26 +451,28 @@
     var generator = NexusModel.generate(lastUserMsg.content, history, {});
 
     function processChunk() {
-      var step = generator.next();
-      if (step.done) {
-        if (!fullResponse) {
-          fullResponse = 'I apologize, but I was unable to generate a response. Please try again.';
-          think.textDiv.style.display = 'block';
-          think.textDiv.innerHTML = renderMarkdown(fullResponse);
+      generator.next().then(function(step) {
+        if (step.done) {
+          if (!fullResponse) {
+            fullResponse = 'I apologize, but I was unable to generate a response. Please try again.';
+            think.textDiv.style.display = 'block';
+            think.textDiv.innerHTML = renderMarkdown(fullResponse);
+          }
+          conv.messages.push({ role: 'assistant', content: fullResponse });
+          setGenerating(false);
+          scrollToBottom();
+          return;
         }
-        conv.messages.push({ role: 'assistant', content: fullResponse });
-        setGenerating(false);
-        scrollToBottom();
-        return;
-      }
-      Promise.resolve(step.value).then(function(chunk) {
+        var chunk = step.value;
         if (firstChunk) {
           think.status.style.display = 'none';
           think.textDiv.style.display = 'block';
           firstChunk = false;
         }
-        fullResponse += chunk;
-        think.textDiv.innerHTML = renderMarkdown(fullResponse);
+        if (chunk != null) {
+          fullResponse += String(chunk);
+          think.textDiv.innerHTML = renderMarkdown(fullResponse);
+        }
         scrollToBottom();
         setTimeout(processChunk, 0);
       }).catch(function(e) {
