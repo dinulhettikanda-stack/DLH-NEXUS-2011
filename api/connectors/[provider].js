@@ -1,7 +1,7 @@
 const {
   PROVIDERS, seal, open, createState, verifyState,
   cookie, clearCookie, redirectUri, providerConfig
-} = require('../../../../lib/connector-oauth');
+} = require('../../lib/connector-oauth');
 
 function send(res, status, body) {
   res.statusCode = status;
